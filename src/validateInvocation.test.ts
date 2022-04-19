@@ -21,7 +21,7 @@ describe('#validateInvocation', () => {
     });
 
     await expect(validateInvocation(executionContext)).rejects.toThrow(
-      'Config requires all of {clientId, clientSecret}',
+      'Config requires all of {envId, accessToken, location}',
     );
   });
 
@@ -54,7 +54,7 @@ describe('#validateInvocation', () => {
      * error messaging is expected and clear to end-users
      */
     describe('invalid user credentials', () => {
-      test.skip('should throw if clientId is invalid', async () => {
+      test.skip('should throw if envId is invalid', async () => {
         recording = setupProjectRecording({
           directory: __dirname,
           name: 'client-id-auth-error',
@@ -67,8 +67,9 @@ describe('#validateInvocation', () => {
 
         const executionContext = createMockExecutionContext({
           instanceConfig: {
-            clientId: 'INVALID',
-            clientSecret: integrationConfig.clientSecret,
+            envId: 'INVALID',
+            accessToken: integrationConfig.accessToken,
+            location: integrationConfig.location,
           },
         });
 
@@ -79,7 +80,7 @@ describe('#validateInvocation', () => {
         );
       });
 
-      test.skip('should throw if clientSecret is invalid', async () => {
+      test.skip('should throw if accessToken is invalid', async () => {
         recording = setupProjectRecording({
           directory: __dirname,
           name: 'client-secret-auth-error',
@@ -90,8 +91,31 @@ describe('#validateInvocation', () => {
 
         const executionContext = createMockExecutionContext({
           instanceConfig: {
-            clientId: integrationConfig.clientSecret,
-            clientSecret: 'INVALID',
+            envId: integrationConfig.accessToken,
+            accessToken: 'INVALID',
+            location: integrationConfig.location,
+          },
+        });
+
+        await expect(validateInvocation(executionContext)).rejects.toThrow(
+          'Provider authentication failed at https://localhost/api/v1/some/endpoint?limit=1: 401 Unauthorized',
+        );
+      });
+
+      test.skip('should throw if location is invalid', async () => {
+        recording = setupProjectRecording({
+          directory: __dirname,
+          name: 'client-secret-auth-error',
+          options: {
+            recordFailedRequests: true,
+          },
+        });
+
+        const executionContext = createMockExecutionContext({
+          instanceConfig: {
+            envId: integrationConfig.accessToken,
+            accessToken: integrationConfig.accessToken,
+            location: 'INVALID',
           },
         });
 

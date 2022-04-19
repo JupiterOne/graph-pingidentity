@@ -1,9 +1,21 @@
-import http from 'http';
+import fetch, { Response } from 'node-fetch';
 
-import { IntegrationProviderAuthenticationError } from '@jupiterone/integration-sdk-core';
+import {
+  IntegrationProviderAPIError,
+  IntegrationProviderAuthenticationError,
+} from '@jupiterone/integration-sdk-core';
 
 import { IntegrationConfig } from './config';
-import { AcmeUser, AcmeGroup } from './types';
+
+import { retry } from '@lifeomic/attempt';
+import {
+  PingOneApplication,
+  PingOneEnvironment,
+  PingOneGroup,
+  PingOneRole,
+  PingOneRoleAssignments,
+  PingOneUser,
+} from './types';
 
 export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
 
@@ -17,36 +29,94 @@ export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
  */
 export class APIClient {
   constructor(readonly config: IntegrationConfig) {}
+  private limit = '100';
+  private baseUri = `https://api.pingone.${this.config.location}/v1/`;
+  private withBaseUri = (path: string) => `${this.baseUri}${path}`;
+  private withEnvId = (path: string) =>
+    `${this.baseUri}environments/${this.config.envId}/${path}`;
 
-  public async verifyAuthentication(): Promise<void> {
-    // TODO make the most light-weight request possible to validate
-    // authentication works with the provided credentials, throw an err if
-    // authentication fails
-    const request = new Promise<void>((resolve, reject) => {
-      http.get(
-        {
-          hostname: 'localhost',
-          port: 443,
-          path: '/api/v1/some/endpoint?limit=1',
-          agent: false,
-          timeout: 10,
+  private checkStatus = (response: Response) => {
+    if (response.ok) {
+      return response;
+    } else {
+      throw new IntegrationProviderAPIError(response);
+    }
+  };
+
+  private async request(
+    uri: string,
+    method: 'GET' | 'HEAD' = 'GET',
+  ): Promise<Response> {
+    try {
+      const options = {
+        method,
+        headers: {
+          Authorization: `Bearer ${this.config.accessToken}`,
         },
-        (res) => {
-          if (res.statusCode !== 200) {
-            reject(new Error('Provider authentication failed'));
-          } else {
-            resolve();
-          }
+      };
+
+      // Handle rate-limiting
+      const response = await retry(
+        async () => {
+          const res: Response = await fetch(uri, options);
+          this.checkStatus(res);
+          return res;
+        },
+        {
+          delay: 5000,
+          maxAttempts: 10,
+          handleError: (err, context) => {
+            if (
+              err.statusCode !== 429 ||
+              ([500, 502, 503].includes(err.statusCode) &&
+                context.attemptNum > 1)
+            )
+              context.abort();
+          },
         },
       );
-    });
+      return response.json();
+    } catch (err) {
+      throw new IntegrationProviderAPIError({
+        endpoint: uri,
+        status: err.status,
+        statusText: err.statusText,
+      });
+    }
+  }
 
+  private async paginatedRequest<T>(
+    uri: string,
+    resourceName: string,
+    iteratee: ResourceIteratee<T>,
+  ): Promise<void> {
     try {
-      await request;
+      let next = null;
+      do {
+        const response = await this.request(next || uri, 'GET');
+
+        for (const resource of response._embedded[resourceName])
+          await iteratee(resource);
+        next = response._links.next?.href;
+      } while (next);
+    } catch (err) {
+      throw new IntegrationProviderAPIError({
+        cause: new Error(err.message),
+        endpoint: uri,
+        status: err.statusCode,
+        statusText: err.message,
+      });
+    }
+  }
+
+  public async verifyAuthentication(): Promise<void> {
+    const uri = this.withBaseUri('environments/');
+    try {
+      await this.request(uri);
     } catch (err) {
       throw new IntegrationProviderAuthenticationError({
         cause: err,
-        endpoint: 'https://localhost/api/v1/some/endpoint?limit=1',
+        endpoint: uri,
         status: err.status,
         statusText: err.statusText,
       });
@@ -54,35 +124,57 @@ export class APIClient {
   }
 
   /**
+   * Fetches the environment resource in the provider.
+   */
+  public async getEnvironment(): Promise<PingOneEnvironment> {
+    return this.request(this.withBaseUri(`environments/${this.config.envId}`));
+  }
+
+  /**
    * Iterates each user resource in the provider.
    *
-   * @param iteratee receives each resource to produce entities/relationships
+   * @param iteratee receives each user to produce entities/relationships
    */
   public async iterateUsers(
-    iteratee: ResourceIteratee<AcmeUser>,
+    iteratee: ResourceIteratee<PingOneUser>,
+    filter?: string,
   ): Promise<void> {
-    // TODO paginate an endpoint, invoke the iteratee with each record in the
-    // page
-    //
-    // The provider API will hopefully support pagination. Functions like this
-    // should maintain pagination state, and for each page, for each record in
-    // the page, invoke the `ResourceIteratee`. This will encourage a pattern
-    // where each resource is processed and dropped from memory.
+    await this.paginatedRequest(
+      this.withEnvId(`users?limit=${this.limit}${filter ? `&${filter}` : ''}`),
+      'users',
+      iteratee,
+    );
+  }
 
-    const users: AcmeUser[] = [
-      {
-        id: 'acme-user-1',
-        name: 'User One',
-      },
-      {
-        id: 'acme-user-2',
-        name: 'User Two',
-      },
-    ];
+  /**
+   * Iterates each group resource in the provider.
+   *
+   * @param iteratee receives each group to produce entities/relationships
+   */
+  public async iterateGroups(
+    iteratee: ResourceIteratee<PingOneGroup>,
+    filter?: string,
+  ): Promise<void> {
+    await this.paginatedRequest(
+      this.withEnvId(`groups?limit=${this.limit}${filter ? `&${filter}` : ''}`),
+      'groups',
+      iteratee,
+    );
+  }
 
-    for (const user of users) {
-      await iteratee(user);
-    }
+  /**
+   * Iterates each role resource in the provider.
+   *
+   * @param iteratee receives each role to produce entities/relationships
+   */
+  public async iterateRoles(
+    iteratee: ResourceIteratee<PingOneRole>,
+  ): Promise<void> {
+    await this.paginatedRequest(
+      this.withBaseUri(`roles?limit=${this.limit}`),
+      'roles',
+      iteratee,
+    );
   }
 
   /**
@@ -90,32 +182,38 @@ export class APIClient {
    *
    * @param iteratee receives each resource to produce entities/relationships
    */
-  public async iterateGroups(
-    iteratee: ResourceIteratee<AcmeGroup>,
+  public async getUserRoleAssignment(
+    userId: string,
+  ): Promise<PingOneRoleAssignments> {
+    return this.request(this.withEnvId(`users/${userId}/roleAssignments`));
+  }
+
+  /**
+   * Iterates each group resource in the provider.
+   *
+   * @param iteratee receives each resource to produce entities/relationships
+   */
+  public async getApplicationRoleAssignment(
+    applicationId: string,
+  ): Promise<PingOneRoleAssignments> {
+    return this.request(
+      this.withEnvId(`applications/${applicationId}/roleAssignments`),
+    );
+  }
+
+  /**
+   * Iterates each application resource in the provider.
+   *
+   * @param iteratee receives each resource to produce entities/relationships
+   */
+  public async iterateApplications(
+    iteratee: ResourceIteratee<PingOneApplication>,
   ): Promise<void> {
-    // TODO paginate an endpoint, invoke the iteratee with each record in the
-    // page
-    //
-    // The provider API will hopefully support pagination. Functions like this
-    // should maintain pagination state, and for each page, for each record in
-    // the page, invoke the `ResourceIteratee`. This will encourage a pattern
-    // where each resource is processed and dropped from memory.
-
-    const groups: AcmeGroup[] = [
-      {
-        id: 'acme-group-1',
-        name: 'Group One',
-        users: [
-          {
-            id: 'acme-user-1',
-          },
-        ],
-      },
-    ];
-
-    for (const group of groups) {
-      await iteratee(group);
-    }
+    await this.paginatedRequest(
+      this.withEnvId(`applications?limit=${this.limit}`),
+      'applications',
+      iteratee,
+    );
   }
 }
 
