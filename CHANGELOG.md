@@ -8,20 +8,22 @@ and this project adheres to
 
 ## [Unreleased]
 
+## 1.0.0 - 2022-04-27
+
 ### Added
 
 - Ingest new entities
-  - `pingidentity_account`
-  - `pingidentity_application`
-  - `pingidentity_role`
-  - `pingidentity_user`
-  - `pingidentity_group`
+  - `pingone_account`
+  - `pingone_application`
+  - `pingone_role`
+  - `pingone_user`
+  - `pingone_group`
 - Build new relationships
-  - `pingidentity_account_has_application`
-  - `pingidentity_account_has_group`
-  - `pingidentity_account_has_role`
-  - `pingidentity_account_has_user`
-  - `pingidentity_application_assigned_role`
-  - `pingidentity_user_assigned_role`
-  - `pingidentity_group_has_group`
-  - `pingidentity_group_has_user`
+  - `pingone_account_has_application`
+  - `pingone_account_has_group`
+  - `pingone_account_has_role`
+  - `pingone_account_has_user`
+  - `pingone_application_assigned_role`
+  - `pingone_user_assigned_role`
+  - `pingone_group_has_group`
+  - `pingone_group_has_user`
