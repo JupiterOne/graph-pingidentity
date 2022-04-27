@@ -4,7 +4,7 @@ import { IntegrationConfig } from '../../../../src/config';
 export const accountSpec: StepSpec<IntegrationConfig>[] = [
   {
     /**
-     * ENDPOINT: n/a
+     * ENDPOINT: {{apiPath}}/environments/{{envId}}
      * PATTERN: Singleton
      */
     id: 'fetch-account',
@@ -12,7 +12,7 @@ export const accountSpec: StepSpec<IntegrationConfig>[] = [
     entities: [
       {
         resourceName: 'Account',
-        _type: 'acme_account',
+        _type: 'pingone_account',
         _class: ['Account'],
       },
     ],

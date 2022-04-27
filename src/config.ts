@@ -21,12 +21,15 @@ import { createAPIClient } from './client';
  * `instance.config` in a UI.
  */
 export const instanceConfigFields: IntegrationInstanceConfigFieldMap = {
-  clientId: {
+  envId: {
     type: 'string',
   },
-  clientSecret: {
+  accessToken: {
     type: 'string',
     mask: true,
+  },
+  location: {
+    type: 'string',
   },
 };
 
@@ -36,14 +39,19 @@ export const instanceConfigFields: IntegrationInstanceConfigFieldMap = {
  */
 export interface IntegrationConfig extends IntegrationInstanceConfig {
   /**
-   * The provider API client ID used to authenticate requests.
+   * The provider environment ID used in requests.
    */
-  clientId: string;
+  envId: string;
 
   /**
-   * The provider API client secret used to authenticate requests.
+   * The provider API access token used to authenticate requests.
    */
-  clientSecret: string;
+  accessToken: string;
+
+  /**
+   * The location where data is stored.
+   */
+  location: string;
 }
 
 export async function validateInvocation(
@@ -51,9 +59,9 @@ export async function validateInvocation(
 ) {
   const { config } = context.instance;
 
-  if (!config.clientId || !config.clientSecret) {
+  if (!config.envId || !config.accessToken || !config.location) {
     throw new IntegrationValidationError(
-      'Config requires all of {clientId, clientSecret}',
+      'Config requires all of {envId, accessToken, location}',
     );
   }
 
