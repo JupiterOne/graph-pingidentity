@@ -1,4 +1,4 @@
-# Integration with JupiterOne
+# Ping Identity Integration with JupiterOne
 
 ## Ping Identity + JupiterOne Integration Benefits
 
