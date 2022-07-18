@@ -15,5 +15,14 @@ questions:
   - user
   - access
 
-
-
+- id: managed-question-ping-identity-application-authentication
+  title: What is the Ping Identity client authentication?
+  description: Returns a Ping Identity client grant and token to access worker applications.
+  queries:
+  - name: Ping Identity Authentication
+    resultsAre: GOOD
+    query: |
+      FIND pingone_application with name ~= "worker" AND grantTypes = "CLIENT_CREDENTIALS" AND tokenEndpointAuthMethod ~= "SECRET"
+  tags:
+  - ping identity
+  - authentication
