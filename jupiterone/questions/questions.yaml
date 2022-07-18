@@ -1,15 +1,19 @@
 ---
-sourceId: managed:template
+sourceId: managed:ping identity
 integrationDefinitionId: '${integration_definition_id}'
-questions: []
-  # - id: integration-question-template-replace-me
-  #   title: What kinds of questions will this integration support?
-  #   description:
-  #     TODO Every integration should contribute questions! Please be carefule
-  #     to replace this before deploying the integration to JupiterOne.
-  #   queries:
-  #     - name: good
-  #       query: |
-  #         find * with _integrationDefinitionId = '${integration_definition_id}'
-  #   tags:
-  #     - template
+questions: 
+- id: managed-question-verify-status-of-ping-identity-active-users
+  title: What is the verification status of Ping Identity active users?
+  description: Returns a list active Ping Identity users status verification.
+  queries:
+  - name: Ping Identity Verification Status
+    resultsAre: INFORMATIVE
+    query: |
+      FIND pingone_user WITH verifyStatus ~= "NOT_INITIATED" OR "IN_PROCESS" OR "ERROR" OR "SUCCESSFUL"
+  tags:
+  - ping identity
+  - user
+  - access
+
+
+
