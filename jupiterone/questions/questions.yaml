@@ -9,7 +9,7 @@ questions:
   - name: Ping Identity Verification Status
     resultsAre: INFORMATIVE
     query: |
-      FIND pingone_user WITH verifyStatus ~= "NOT_INITIATED" OR "IN_PROCESS" OR "ERROR" OR "SUCCESSFUL"
+      FIND pingone_user WITH verifyStatus ~= ("NOT_INITIATED" OR "IN_PROCESS" OR "ERROR" OR "SUCCESSFUL")
   tags:
   - ping identity
   - user
