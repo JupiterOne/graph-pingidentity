@@ -4,7 +4,7 @@ integrationDefinitionId: '${integration_definition_id}'
 questions: 
 - id: managed-question-verify-status-of-ping-identity-active-users
   title: What is the verification status of Ping Identity active users?
-  description: Returns a list active Ping Identity users status verification.
+  description: Returns a list active of Ping Identity users' verification status.
   queries:
   - name: Ping Identity Verification Status
     resultsAre: INFORMATIVE
