@@ -1,5 +1,5 @@
 ---
-sourceId: managed:ping identity
+sourceId: managed:ping-identity
 integrationDefinitionId: '${integration_definition_id}'
 questions: 
 - id: managed-question-verify-status-of-ping-identity-active-users
