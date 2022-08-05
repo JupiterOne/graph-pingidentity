@@ -22,7 +22,7 @@ questions:
   - name: Ping Identity Authentication
     resultsAre: GOOD
     query: |
-      FIND pingone_application WITH name ~= "worker" AND grantTypes = "CLIENT_CREDENTIALS" AND tokenEndpointAuthMethod ~= "SECRET"
+      FIND pingone_application WITH (name ~= "worker" AND grantTypes = "CLIENT_CREDENTIALS" AND tokenEndpointAuthMethod ~= "SECRET")
   tags:
   - ping identity
   - authentication
