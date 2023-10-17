@@ -2,6 +2,10 @@
   "name": "@jupiterone/graph-pingidentity",
   "version": "1.0.0",
   "description": "A JupiterOne Integration for ingesting data of the PingIdentity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JupiterOne/graph-pingidentity"
+  },
   "license": "MPL-2.0",
   "main": "src/index.js",
   "types": "src/index.d.ts",
